@@ -11,7 +11,7 @@ import PromptHeader from "../../../components/prompt/PromptHeader";
 import OutputPreview from "../../../components/prompt/OutputPreview";
 import PromptBody from "../../../components/prompt/PromptBody";
 import ParametersSection from "../../../components/prompt/ParametersSection";
-import CommentsPlaceholder from "../../../components/prompt/CommentsPlaceholder";
+import CommentsSection from "../../../components/prompt/CommentsSection";
 import EngagementPanel from "../../../components/prompt/EngagementPanel";
 import StatsPanel from "../../../components/prompt/StatsPanel";
 import CreatorPanel from "../../../components/prompt/CreatorPanel";
@@ -85,7 +85,11 @@ export default async function PromptPage({ params }: PageProps) {
           <OutputPreview prompt={prompt} />
           <PromptBody prompt={prompt} />
           <ParametersSection />
-          <CommentsPlaceholder />
+          <CommentsSection
+            promptId={prompt.id}
+            currentUserId={userId}
+            promptAuthorId={prompt.authorId}
+          />
         </div>
 
         <div className="w-full lg:w-72 flex flex-col gap-4">
