@@ -1,7 +1,8 @@
 // components/explore/ExploreFilters.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 
 const CATEGORY_OPTIONS = [
@@ -19,13 +20,28 @@ const SORT_OPTIONS = ["Trending", "Latest", "Most Liked", "Most Viewed"];
 
 const PRICE_OPTIONS = ["All", "Free", "Paid"];
 
-export function ExploreFilters() {
+type ExploreFiltersProps = {
+  initialQuery: string;
+};
+
+export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
   const [showFilters, setShowFilters] = useState(false);
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedTools, setSelectedTools] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>("Trending");
   const [price, setPrice] = useState<string>("All");
+
+  // search bar state
+  const [query, setQuery] = useState(initialQuery);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Keep local query in sync with URL (?query=) so navbar and explore stay aligned
+  useEffect(() => {
+    const q = searchParams.get("query") ?? "";
+    setQuery(q);
+  }, [searchParams]);
 
   const toggleArray = (
     value: string,
@@ -39,16 +55,30 @@ export function ExploreFilters() {
     }
   };
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = query.trim();
+
+    if (!trimmed) {
+      router.push("/explore");
+    } else {
+      router.push(`/explore?query=${encodeURIComponent(trimmed)}`);
+    }
+  };
+
   return (
     <div className="mb-6 space-y-4">
       {/* Search + Filters button row */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
-          <div className="flex items-center gap-2 rounded-full bg-[#05060a] border border-white/10 px-4 py-2 text-sm text-gray-400">
-            <span className="text-xs text-gray-500">
-              Search prompts, creators, tags...
-            </span>
-          </div>
+          <form onSubmit={handleSearchSubmit}>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search prompts, creators, tags..."
+              className="w-full flex items-center gap-2 rounded-full bg-[#05060a] border border-white/10 px-4 py-2 text-sm text-gray-200 placeholder:text-gray-500 outline-none focus:border-purple-500"
+            />
+          </form>
         </div>
         <div className="flex items-center gap-2 justify-end">
           <button

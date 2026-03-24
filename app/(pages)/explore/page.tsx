@@ -3,8 +3,24 @@ import { prisma } from "@/lib/prisma";
 import { PromptCard } from "../../components/prompt/PromptCard";
 import { ExploreFilters } from "../../components/explore/ExploreFilters";
 
-export default async function ExplorePage() {
+type ExplorePageProps = {
+  searchParams: Promise<{ query?: string }>;
+};
+
+export default async function ExplorePage({ searchParams }: ExplorePageProps) {
+  const resolved = await searchParams;
+  const query = resolved.query?.trim() ?? "";
+
   const prompts = await prisma.prompt.findMany({
+    where: query
+      ? {
+          OR: [
+            { title: { contains: query, mode: "insensitive" } },
+            { description: { contains: query, mode: "insensitive" } },
+            { tags: { hasSome: [query] } },
+          ],
+        }
+      : undefined,
     orderBy: { createdAt: "desc" },
     include: {
       author: {
@@ -16,7 +32,7 @@ export default async function ExplorePage() {
         },
       },
     },
-  });
+  }); // awaits searchParams before using it, as required in Next.js app router [web:173][web:176]
 
   return (
     <div className="min-h-screen bg-black text-white px-4 sm:px-6 lg:px-10 py-8">
@@ -32,14 +48,12 @@ export default async function ExplorePage() {
           </div>
         </header>
 
-        {/* Search + Filters (client) */}
-        <ExploreFilters />
+        <ExploreFilters initialQuery={query} />
 
         <p className="text-xs text-gray-500 mb-4">
           Showing {prompts.length} prompts
         </p>
 
-        {/* Cards grid */}
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {prompts.map((prompt) => (
             <PromptCard
