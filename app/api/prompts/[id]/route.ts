@@ -8,10 +8,10 @@ function isValidObjectId(id: string) {
   return /^[0-9a-fA-F]{24}$/.test(id);
 }
 
-// GET single prompt (if you have it)
+// GET single prompt
 export async function GET(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: { params: Promise<{ id: string }> }
 ) {
   const { id } = await context.params;
 
@@ -40,83 +40,116 @@ export async function GET(
   return NextResponse.json(prompt);
 }
 
-// PATCH update prompt (this is the one mentioned in the error)
+// PATCH update prompt
 export async function PATCH(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
+  try {
+    const { id } = await context.params;
 
-  if (!isValidObjectId(id)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    }
+
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // ✅ FIX: handle FormData instead of JSON
+    const formData = await req.formData();
+
+    const title = formData.get("title") as string;
+    const description = formData.get("description") as string;
+    const promptText = formData.get("promptText") as string;
+    const outputType = formData.get("outputType") as string;
+
+    // ✅ FIX: tags parsing
+    const tagsString = formData.get("tags") as string;
+    const tags = tagsString
+      ? tagsString.split(",").map((t) => t.trim()).filter(Boolean)
+      : [];
+
+    // (optional) image handling placeholder
+    // const image = formData.get("image");
+
+    const existing = await prisma.prompt.findUnique({
+      where: { id },
+      select: { authorId: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (existing.authorId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const updated = await prisma.prompt.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        promptText,
+        tags,
+        outputType,
+      },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("PATCH /api/prompts/[id] error:", error);
+    return NextResponse.json(
+      { error: "Failed to update prompt" },
+      { status: 500 }
+    );
   }
-
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const body = await req.json();
-  const { title, description, promptText, tags, image, outputType } = body;
-
-  const existing = await prisma.prompt.findUnique({
-    where: { id },
-    select: { authorId: true },
-  });
-
-  if (!existing) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  if (existing.authorId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const updated = await prisma.prompt.update({
-    where: { id },
-    data: {
-      title,
-      description,
-      promptText,
-      tags,
-      image,
-      outputType,
-    },
-  });
-
-  return NextResponse.json(updated);
 }
 
-// DELETE prompt (if you have this)
+// DELETE prompt
 export async function DELETE(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> },
+  context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
+  try {
+    const { id } = await context.params;
 
-  if (!isValidObjectId(id)) {
-    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    if (!isValidObjectId(id)) {
+      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    }
+
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const existing = await prisma.prompt.findUnique({
+      where: { id },
+      select: { authorId: true },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (existing.authorId !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    await prisma.prompt.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /api/prompts/[id] error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete prompt" },
+      { status: 500 }
+    );
   }
-
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const existing = await prisma.prompt.findUnique({
-    where: { id },
-    select: { authorId: true },
-  });
-
-  if (!existing) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  if (existing.authorId !== session.user.id) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  await prisma.prompt.delete({ where: { id } });
-
-  return NextResponse.json({ success: true });
 }

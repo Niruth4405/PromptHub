@@ -1,12 +1,12 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import type { Adapter } from "next-auth/adapters";
 
-// 🔥 Username generator (CRITICAL)
 function generateUsername(email: string) {
   return (
     email.split("@")[0] +
@@ -15,15 +15,12 @@ function generateUsername(email: string) {
   );
 }
 
-export const {
-  handlers: { GET, POST },
-  auth,
-  signIn,
-  signOut,
-} = NextAuth({
+const config = {
   debug: true,
+  trustHost: true,
 
-  adapter: PrismaAdapter(prisma),
+  // Cast to Adapter to avoid skew between @auth/core and next-auth types
+  adapter: PrismaAdapter(prisma) as Adapter,
 
   session: {
     strategy: "jwt",
@@ -63,10 +60,13 @@ export const {
 
         if (!isValid) return null;
 
+        // Must match your augmented User type (id, username, etc.)
         return {
           id: user.id,
           name: user.name,
           email: user.email,
+          image: user.image,
+          username: user.username,
         };
       },
     }),
@@ -97,24 +97,24 @@ export const {
         }
 
         // 🔗 Link OAuth account if needed
-        if (account?.provider !== "credentials") {
+        if (account?.provider !== "credentials" && account) {
           await prisma.account.upsert({
             where: {
               provider_providerAccountId: {
-                provider: account!.provider,
-                providerAccountId: account!.providerAccountId,
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
               },
             },
             update: {},
             create: {
               userId: existingUser.id,
-              provider: account!.provider,
-              providerAccountId: account!.providerAccountId,
-              type: account!.type,
-              access_token: account!.access_token,
-              id_token: account!.id_token,
-              scope: account!.scope,
-              token_type: account!.token_type,
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+              type: account.type,
+              access_token: account.access_token,
+              id_token: account.id_token,
+              scope: account.scope,
+              token_type: account.token_type,
             },
           });
         }
@@ -185,4 +185,11 @@ export const {
   },
 
   secret: process.env.NEXTAUTH_SECRET,
-});
+} satisfies NextAuthConfig;
+
+export const {
+  handlers: { GET, POST },
+  auth,
+  signIn,
+  signOut,
+} = NextAuth(config);

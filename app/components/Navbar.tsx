@@ -281,6 +281,7 @@ export default function Navbar() {
                   height={40}
                   className="w-10 h-10 rounded-full border border-white/10"
                   alt="avatar"
+                  priority
                 />
                 <div>
                   <p className="text-white text-sm font-medium">

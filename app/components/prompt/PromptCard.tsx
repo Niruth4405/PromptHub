@@ -96,6 +96,7 @@ export function PromptCard({
                   width={24}
                   height={24}
                   className="h-full w-full object-cover"
+                  priority
                 />
               ) : (
                 (author.name || author.username).charAt(0).toUpperCase()

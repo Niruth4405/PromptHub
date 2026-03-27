@@ -14,6 +14,7 @@ export default function OutputPreview({ prompt }: { prompt: any }) {
             width={1200}
             height={700}
             className="w-full h-full object-cover"
+            priority
           />
         ) : (
           <div className="h-64 flex items-center justify-center text-gray-500 text-sm">

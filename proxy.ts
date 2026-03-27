@@ -1,25 +1,33 @@
-// middleware.ts
+// proxy.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-const PROTECTED_PATHS = ["/shareOrEditPrompt", "/leaderboard", "/pricing", "/profile", "/explore"];
+const PROTECTED_PATHS = [
+  "/shareOrEditPrompt",
+  "/leaderboard",
+  "/pricing",
+  "/profile",
+  "/explore",
+];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // only guard configured paths
   const isProtected = PROTECTED_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
 
   if (!isProtected) return NextResponse.next();
 
-  // check authjs session cookie (Auth.js / NextAuth style)
-  const sessionToken =
-    req.cookies.get("authjs.session-token") ??
-    req.cookies.get("__Secure-authjs.session-token");
+  console.log("SECRET:", process.env.NEXTAUTH_SECRET);
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+ 
 
-  if (!sessionToken) {
+  if (!token) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
