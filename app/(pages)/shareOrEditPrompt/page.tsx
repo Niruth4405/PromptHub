@@ -7,6 +7,9 @@ import clsx from "clsx";
 
 type Mode = "create" | "edit";
 
+type OutputType = "image" | "video" | "code" | "text";
+type VisibilityType = "public" | "private" | "paid";
+
 type InitialPrompt = {
   id?: string;
   title?: string;
@@ -14,23 +17,14 @@ type InitialPrompt = {
   promptText?: string;
   tags?: string[];
   image?: string | null;
-  outputType?: "image" | "video" | "code" | "text";
-  visibility?: "public" | "private" | "paid";
+  outputType?: OutputType;
+  visibility?: VisibilityType;
   isDraft?: boolean;
 };
 
-const OUTPUT_TYPES: InitialPrompt["outputType"][] = [
-  "image",
-  "video",
-  "code",
-  "text",
-];
+const OUTPUT_TYPES: OutputType[] = ["image", "video", "code", "text"];
 
-const VISIBILITY_OPTIONS: InitialPrompt["visibility"][] = [
-  "public",
-  "private",
-  "paid",
-];
+const VISIBILITY_OPTIONS: VisibilityType[] = ["public", "private", "paid"];
 
 const TOOL_OPTIONS = [
   "Midjourney",
@@ -80,8 +74,8 @@ export default function ShareOrEditPromptPage() {
           promptText: data.promptText,
           tags: data.tags || [],
           image: data.image,
-          outputType: data.outputType || "image",
-          visibility: data.visibility || "public",
+          outputType: (data.outputType as OutputType) || "image",
+          visibility: (data.visibility as VisibilityType) || "public",
           isDraft: data.isDraft ?? false,
         });
       })();
@@ -98,20 +92,16 @@ export default function ShareOrEditPromptPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [promptText, setPromptText] = useState("");
-  const [outputType, setOutputType] =
-    useState<InitialPrompt["outputType"]>("image");
-  const [visibility, setVisibility] =
-    useState<InitialPrompt["visibility"]>("public");
+  const [outputType, setOutputType] = useState<OutputType>("image");
+  const [visibility, setVisibility] = useState<VisibilityType>("public");
   const [isDraft, setIsDraft] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Tags state: actual tags array + current input value
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
 
-  // For keeping the comma-separated string that the backend expects
   const tagsInput = useMemo(() => tags.join(", "), [tags]);
 
   useEffect(() => {
@@ -136,7 +126,6 @@ export default function ShareOrEditPromptPage() {
     }
   };
 
-  // Add free-typed tag on Enter
   const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -149,12 +138,10 @@ export default function ShareOrEditPromptPage() {
     }
   };
 
-  // Remove tag pill
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
   };
 
-  // Toggle a tool/category into tags
   const toggleTagFromPreset = (label: string) => {
     if (tags.includes(label)) {
       setTags(tags.filter((t) => t !== label));
@@ -168,7 +155,7 @@ export default function ShareOrEditPromptPage() {
   const handleSubmit = async (submitMode: "publish" | "draft" | "preview") => {
     if (!initial) return;
     if (submitMode === "preview") {
-      // no-op for now
+      // implement preview later
       return;
     }
 
@@ -179,8 +166,8 @@ export default function ShareOrEditPromptPage() {
       fd.append("description", description);
       fd.append("promptText", promptText);
       fd.append("tags", tagsInput);
-      fd.append("outputType", outputType || "image");
-      fd.append("visibility", visibility || "public");
+      fd.append("outputType", outputType);
+      fd.append("visibility", visibility);
       fd.append("isDraft", (submitMode === "draft" || isDraft).toString());
 
       if (file) {
@@ -188,9 +175,7 @@ export default function ShareOrEditPromptPage() {
       }
 
       const url =
-        mode === "create"
-          ? "/api/prompts"
-          : `/api/prompts/${initial.id}`;
+        mode === "create" ? "/api/prompts" : `/api/prompts/${initial.id}`;
 
       const method = mode === "create" ? "POST" : "PATCH";
 
@@ -325,7 +310,6 @@ export default function ShareOrEditPromptPage() {
               ))}
             </div>
 
-            {/* Upload box */}
             <div
               className="mt-2 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-dashed border-white/20 bg-black/30 px-4 py-6 text-center sm:text-left"
               onDragOver={(e) => e.preventDefault()}
@@ -422,7 +406,6 @@ export default function ShareOrEditPromptPage() {
           <section className="bg-[#0b0f16] border border-white/10 rounded-2xl p-4 sm:p-6">
             <h2 className="text-sm font-medium text-gray-200 mb-3">Tags</h2>
 
-            {/* Existing tags as pills */}
             {tags.length > 0 && (
               <div className="mb-3 flex flex-wrap gap-2">
                 {tags.map((tag) => (

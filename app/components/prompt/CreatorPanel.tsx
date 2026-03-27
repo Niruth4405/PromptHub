@@ -1,16 +1,23 @@
 import Image from "next/image";
 import Link from "next/link";
 
+type CreatorPanelProps = {
+  prompt: any;
+  isOwner: boolean;
+  isFollowing: boolean;
+  isLoadingFollow?: boolean;
+  onToggleFollow: () => void;
+};
+
 export default function CreatorPanel({
   prompt,
   isOwner,
-}: {
-  prompt: any;
-  isOwner: boolean;
-}) {
-  if (isOwner) return null;
-
-  const author = prompt.author;
+  isFollowing,
+  isLoadingFollow = false,
+  onToggleFollow,
+}: CreatorPanelProps) {
+  const author = prompt?.author;
+  if (isOwner || !author) return null;
 
   return (
     <section className="bg-[#05060a] border border-white/10 rounded-2xl p-4 text-[11px] text-gray-300">
@@ -42,8 +49,16 @@ export default function CreatorPanel({
         </div>
       </div>
 
-      <button className="w-full rounded-full bg-white text-black text-xs font-medium py-2 mb-2 hover:bg-gray-100">
-        Follow
+      <button
+        className={`cursor-pointer w-full rounded-full text-xs font-medium py-2 mb-2 transition ${
+          isFollowing
+            ? "bg-white/5 border border-white/30 text-gray-200 hover:bg-white/10"
+            : "bg-white text-black hover:bg-gray-100"
+        }`}
+        disabled={isLoadingFollow}
+        onClick={onToggleFollow}
+      >
+        {isLoadingFollow ? "..." : isFollowing ? "Following" : "Follow"}
       </button>
 
       <button className="w-full rounded-full bg-white/5 border border-white/15 text-[11px] py-2 text-gray-200 hover:bg-white/10 transition">

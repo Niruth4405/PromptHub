@@ -17,6 +17,7 @@ import StatsPanel from "../../../components/prompt/StatsPanel";
 import CreatorPanel from "../../../components/prompt/CreatorPanel";
 import AIEnhancementPanel from "../../../components/prompt/AIEnhancementPanel";
 import OwnerActions from "../../../components/prompt/OwnerActions";
+import PromptSidebarClient from "../../../components/prompt/PromptSidebarClient";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -75,6 +76,18 @@ export default async function PromptPage({ params }: PageProps) {
 
   const isOwner = userId === prompt.authorId;
 
+  const followRecord = userId
+    ? await prisma.follow.findFirst({
+        where: {
+          followerId: userId,
+          followingId: prompt.author.id,
+        },
+        select: { id: true },
+      })
+    : null;
+
+  const initialIsFollowing = !!followRecord;
+
   return (
     <div className="min-h-screen bg-black text-white px-4 sm:px-6 lg:px-10 py-8">
       <PromptViewTracker id={prompt.id} />
@@ -92,18 +105,15 @@ export default async function PromptPage({ params }: PageProps) {
           />
         </div>
 
-        <div className="w-full lg:w-72 flex flex-col gap-4">
-          <EngagementPanel
-            promptId={prompt.id}
-            initialLikes={prompt.likes}
-            initialIsLiked={initialIsLiked}
-            initialIsSaved={initialIsSaved}
-          />
-          {isOwner && <OwnerActions promptId={prompt.id} />}
-          <StatsPanel prompt={prompt} />
-          <CreatorPanel prompt={prompt} isOwner={isOwner} />
-          <AIEnhancementPanel />
-        </div>
+        {/* Client sidebar wrapper handles follow button state */}
+        <PromptSidebarClient
+          prompt={prompt}
+          isOwner={isOwner}
+          userId={userId}
+          initialIsLiked={initialIsLiked}
+          initialIsSaved={initialIsSaved}
+          initialIsFollowing={initialIsFollowing}
+        />
       </div>
     </div>
   );

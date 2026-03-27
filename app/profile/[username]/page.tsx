@@ -24,13 +24,23 @@ export default async function ProfilePage({
       prompts: {
         orderBy: { createdAt: "desc" },
       },
-      promptSaves: true, // 👈 include collections
+      promptSaves: true,
     },
   });
 
   if (!user) return notFound();
 
   const isOwner = session?.user?.id === user.id;
+
+  // ✅ FIXED COUNTS (same UI, correct logic)
+  const [followersCount, followingCount] = await Promise.all([
+    prisma.follow.count({
+      where: { followingId: user.id },
+    }),
+    prisma.follow.count({
+      where: { followerId: user.id },
+    }),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#0b0f1a] text-white px-4 sm:px-6 lg:px-8 py-10">
@@ -116,7 +126,7 @@ export default async function ProfilePage({
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
           <StatCard label="Prompts" value={user.prompts.length} />
           <StatCard label="Collections" value={user.promptSaves.length} />
           <StatCard
@@ -127,6 +137,14 @@ export default async function ProfilePage({
             label="Total Views"
             value={user.prompts.reduce((a, p) => a + p.views, 0)}
           />
+
+          <Link href={`/profile/${user.username}/followers`}>
+            <StatCard label="Followers" value={followersCount} />
+          </Link>
+
+          <Link href={`/profile/${user.username}/following`}>
+            <StatCard label="Following" value={followingCount} />
+          </Link>
         </div>
 
         {/* EXPERTISE */}
@@ -200,12 +218,12 @@ export default async function ProfilePage({
   );
 }
 
-/* STAT CARD */
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-[#111827] border border-white/10 rounded-xl p-4">
+    <div className="bg-[#111827] border border-white/10 rounded-xl p-4 cursor-pointer">
       <p className="text-xl font-bold">{value}</p>
       <p className="text-sm text-gray-400">{label}</p>
     </div>
   );
 }
+
