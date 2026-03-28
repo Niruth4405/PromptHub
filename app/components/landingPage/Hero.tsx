@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -54,18 +55,22 @@ export default function Hero() {
 
         {/* Description */}
         <p className="mt-6 text-gray-400 max-w-2xl text-base md:text-lg">
-          Discover prompts that work. Share your creations with the world.
-          Build a following and monetize your expertise.
+          Discover prompts that work. Share your creations with the world. Build
+          a following and monetize your expertise.
         </p>
 
         {/* Buttons */}
         <div className="mt-8 flex flex-col sm:flex-row gap-4">
-          <button className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 hover:opacity-90 transition font-medium">
-            Explore Prompts →
-          </button>
-          <button className="px-6 py-3 rounded-lg border border-gray-700 hover:bg-white/5 transition">
-            Share a Prompt
-          </button>
+          <Link href="/explore">
+            <button className="px-6 py-3 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 hover:opacity-90 transition font-medium">
+              Explore Prompts →
+            </button>
+          </Link>
+          <Link href="/shareOrEditPrompt">
+            <button className="px-6 py-3 rounded-lg border border-gray-700 hover:bg-white/5 transition">
+              Share a Prompt
+            </button>
+          </Link>
         </div>
 
         {/* Stats */}

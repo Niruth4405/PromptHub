@@ -119,7 +119,7 @@ export default function Navbar() {
           <Link href="/explore" className="hover:text-white">
             Explore
           </Link>
-          <Link href="/for-you" className="hover:text-white">
+          <Link href="/forYou" className="hover:text-white">
             For You
           </Link>
         </div>
@@ -249,7 +249,7 @@ export default function Navbar() {
             <Link href="/explore" className="hover:text-white">
               Explore
             </Link>
-            <Link href="/for-you" className="hover:text-white">
+            <Link href="/forYou" className="hover:text-white">
               For You
             </Link>
           </div>

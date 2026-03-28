@@ -23,25 +23,22 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ✅ Get token correctly (fix for production)
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET!,
-    secureCookie: process.env.NODE_ENV === "production", // 🔥 important
-  });
+ const token = await getToken({
+  req,
+  secret: process.env.NEXTAUTH_SECRET,
+  secureCookie: true, // ✅ FIX
+});
 
-  // 🧪 Debug (remove later)
   console.log("TOKEN:", token);
   console.log("PATH:", pathname);
 
-  // ❌ Not authenticated → redirect
+
   if (!token) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // ✅ Authenticated → allow access
   return NextResponse.next();
 }
 

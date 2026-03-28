@@ -1,0 +1,14 @@
+Pending tasks:
+1. Finish for you page
+2. Enable Filters in /explore page
+3. Work on enabling public, private and paid prompts
+4. Create admin page
+
+
+Bonus features to add to improve project quality:
+1. Toasters for:
+- After successful or failed login/signup attempts
+- After copying prompts
+- After creating/editing/deleting prompts
+2. Loading animation
+3. Methods to improve speed of project. 
