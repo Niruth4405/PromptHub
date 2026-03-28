@@ -16,10 +16,9 @@ function generateUsername(email: string) {
 }
 
 const config = {
-  debug: true,
+  debug: process.env.NODE_ENV === "development", // ✅ FIXED
   trustHost: true,
 
-  // Cast to Adapter to avoid skew between @auth/core and next-auth types
   adapter: PrismaAdapter(prisma) as Adapter,
 
   session: {
@@ -57,10 +56,8 @@ const config = {
         if (!user || !user.passwordHash) return null;
 
         const isValid = await bcrypt.compare(password, user.passwordHash);
-
         if (!isValid) return null;
 
-        // Must match your augmented User type (id, username, etc.)
         return {
           id: user.id,
           name: user.name,
@@ -77,7 +74,7 @@ const config = {
   },
 
   callbacks: {
-    // 🔥 HANDLE OAUTH + USERNAME GUARANTEE
+    // 🔥 HANDLE OAUTH + USER CREATION
     async signIn({ user, account }) {
       if (!user.email) return true;
 
@@ -85,7 +82,6 @@ const config = {
         where: { email: user.email },
       });
 
-      // 🧠 If user exists → ensure username exists
       if (existingUser) {
         if (!existingUser.username) {
           await prisma.user.update({
@@ -96,7 +92,6 @@ const config = {
           });
         }
 
-        // 🔗 Link OAuth account if needed
         if (account?.provider !== "credentials" && account) {
           await prisma.account.upsert({
             where: {
@@ -120,46 +115,38 @@ const config = {
         }
 
         (user as any).id = existingUser.id;
-      }
-
-      // 🆕 If new user → create with username
-      else {
+        (user as any).username = existingUser.username; // ✅ ADD THIS
+      } else {
         const newUser = await prisma.user.create({
           data: {
             email: user.email,
             name: user.name,
             image: user.image,
-            username: generateUsername(user.email), // ✅ REQUIRED
+            username: generateUsername(user.email),
           },
         });
 
         (user as any).id = newUser.id;
+        (user as any).username = newUser.username; // ✅ ADD THIS
       }
 
       return true;
     },
 
-    // 🔐 JWT
+    // 🔐 JWT (NO DB CALL)
     async jwt({ token, user }) {
       if (user) {
         token.id = (user as any).id;
+        token.username = (user as any).username; // ✅ STORE HERE
       }
       return token;
     },
 
-    // 🔐 SESSION
+    // 🔐 SESSION (NO DB CALL)
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
-
-        // 🔥 include username in session
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-        });
-
-        if (dbUser) {
-          (session.user as any).username = dbUser.username;
-        }
+        (session.user as any).username = token.username; // ✅ USE TOKEN
       }
       return session;
     },
