@@ -69,7 +69,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(prompt, { status: 201 });
 }
 
-
 export async function GET(_req: NextRequest) {
   const prompts = await prisma.prompt.findMany({
     orderBy: { createdAt: "desc" },

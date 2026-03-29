@@ -1,8 +1,7 @@
-// components/explore/ExploreFilters.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import clsx from "clsx";
 
 const CATEGORY_OPTIONS = [
@@ -32,38 +31,68 @@ export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
   const [sortBy, setSortBy] = useState<string>("Trending");
   const [price, setPrice] = useState<string>("All");
 
-  // search bar state
   const [query, setQuery] = useState(initialQuery);
+
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname(); // 🔥 important (works for /explore & /for-you)
 
-  // Keep local query in sync with URL (?query=) so navbar and explore stay aligned
+  // ✅ Sync FROM URL → state (on load / refresh)
   useEffect(() => {
     const q = searchParams.get("query") ?? "";
+    const cat = searchParams.get("category") ?? "";
+    const tool = searchParams.get("tool") ?? "";
+    const sort = searchParams.get("sort") ?? "Trending";
+    const priceParam = searchParams.get("price") ?? "All";
+
     setQuery(q);
+    setSelectedCategories(cat ? cat.split(",") : []);
+    setSelectedTools(tool ? tool.split(",") : []);
+    setSortBy(sort);
+    setPrice(priceParam);
   }, [searchParams]);
+
+  // ✅ Helper to update URL params
+  const updateURL = (updates: Record<string, string | string[]>) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (!value || (Array.isArray(value) && value.length === 0)) {
+        params.delete(key);
+      } else {
+        params.set(
+          key,
+          Array.isArray(value) ? value.join(",") : value,
+        );
+      }
+    });
+
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   const toggleArray = (
     value: string,
     list: string[],
     setter: (v: string[]) => void,
+    key: string,
   ) => {
+    let updated;
+
     if (list.includes(value)) {
-      setter(list.filter((v) => v !== value));
+      updated = list.filter((v) => v !== value);
     } else {
-      setter([...list, value]);
+      updated = [...list, value];
     }
+
+    setter(updated);
+    updateURL({ [key]: updated });
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = query.trim();
 
-    if (!trimmed) {
-      router.push("/explore");
-    } else {
-      router.push(`/explore?query=${encodeURIComponent(trimmed)}`);
-    }
+    updateURL({ query: trimmed });
   };
 
   return (
@@ -76,16 +105,17 @@ export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search prompts, creators, tags..."
-              className="w-full flex items-center gap-2 rounded-full bg-[#05060a] border border-white/10 px-4 py-2 text-sm text-gray-200 placeholder:text-gray-500 outline-none focus:border-purple-500"
+              className="w-full rounded-full bg-[#05060a] border border-white/10 px-4 py-2 text-sm text-gray-200 placeholder:text-gray-500 outline-none focus:border-purple-500"
             />
           </form>
         </div>
+
         <div className="flex items-center gap-2 justify-end">
           <button
             type="button"
             onClick={() => setShowFilters((prev) => !prev)}
             className={clsx(
-              "px-4 py-2 rounded-full text-xs sm:text-sm flex items-center gap-2 transition",
+              "px-4 py-2 rounded-full text-xs sm:text-sm transition",
               showFilters
                 ? "bg-purple-600 text-white"
                 : "bg-[#05060a] border border-white/15 text-gray-100 hover:border-purple-500/60",
@@ -93,6 +123,7 @@ export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
           >
             Filters
           </button>
+
           <button className="px-3 py-2 rounded-full bg-[#05060a] border border-white/10 text-xs">
             ⬜⬜
           </button>
@@ -115,7 +146,12 @@ export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
                     key={cat}
                     type="button"
                     onClick={() =>
-                      toggleArray(cat, selectedCategories, setSelectedCategories)
+                      toggleArray(
+                        cat,
+                        selectedCategories,
+                        setSelectedCategories,
+                        "category",
+                      )
                     }
                     className={clsx(
                       "px-3 py-1.5 rounded-full text-[11px] border transition",
@@ -137,26 +173,23 @@ export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
             <div className="flex flex-wrap gap-2">
               {TOOL_OPTIONS.map((tool) => {
                 const active = selectedTools.includes(tool);
-                const colorClasses =
-                  tool === "Midjourney"
-                    ? "bg-purple-800/60 border-purple-400"
-                    : tool === "DALL·E 3"
-                    ? "bg-green-800/60 border-green-400"
-                    : tool === "Stable Diffusion"
-                    ? "bg-amber-800/60 border-amber-400"
-                    : "bg-emerald-800/60 border-emerald-400";
 
                 return (
                   <button
                     key={tool}
                     type="button"
                     onClick={() =>
-                      toggleArray(tool, selectedTools, setSelectedTools)
+                      toggleArray(
+                        tool,
+                        selectedTools,
+                        setSelectedTools,
+                        "tool",
+                      )
                     }
                     className={clsx(
                       "px-3 py-1.5 rounded-full text-[11px] border transition",
                       active
-                        ? colorClasses + " text-white"
+                        ? "bg-purple-700 text-white border-purple-500"
                         : "bg-transparent text-gray-200 border-white/15 hover:border-purple-500/60",
                     )}
                   >
@@ -167,7 +200,7 @@ export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
             </div>
           </div>
 
-          {/* Sort By */}
+          {/* Sort */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <span className="w-24 text-[11px] text-gray-400">Sort By</span>
             <div className="flex flex-wrap gap-3">
@@ -175,7 +208,10 @@ export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
                 <button
                   key={option}
                   type="button"
-                  onClick={() => setSortBy(option)}
+                  onClick={() => {
+                    setSortBy(option);
+                    updateURL({ sort: option });
+                  }}
                   className={clsx(
                     "text-[11px] transition",
                     sortBy === option
@@ -197,7 +233,10 @@ export function ExploreFilters({ initialQuery }: ExploreFiltersProps) {
                 <button
                   key={option}
                   type="button"
-                  onClick={() => setPrice(option)}
+                  onClick={() => {
+                    setPrice(option);
+                    updateURL({ price: option });
+                  }}
                   className={clsx(
                     "text-[11px] transition",
                     price === option
