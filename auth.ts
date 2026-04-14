@@ -16,10 +16,9 @@ function generateUsername(email: string) {
 }
 
 const config = {
-  debug: true,
+  debug: process.env.NODE_ENV === "development", // ← don't log in production
   trustHost: true,
 
-  // Cast to Adapter to avoid skew between @auth/core and next-auth types
   adapter: PrismaAdapter(prisma) as Adapter,
 
   session: {
@@ -57,10 +56,8 @@ const config = {
         if (!user || !user.passwordHash) return null;
 
         const isValid = await bcrypt.compare(password, user.passwordHash);
-
         if (!isValid) return null;
 
-        // Must match your augmented User type (id, username, etc.)
         return {
           id: user.id,
           name: user.name,
@@ -77,7 +74,6 @@ const config = {
   },
 
   callbacks: {
-    // 🔥 HANDLE OAUTH + USERNAME GUARANTEE
     async signIn({ user, account }) {
       if (!user.email) return true;
 
@@ -85,18 +81,14 @@ const config = {
         where: { email: user.email },
       });
 
-      // 🧠 If user exists → ensure username exists
       if (existingUser) {
         if (!existingUser.username) {
           await prisma.user.update({
             where: { id: existingUser.id },
-            data: {
-              username: generateUsername(user.email),
-            },
+            data: { username: generateUsername(user.email) },
           });
         }
 
-        // 🔗 Link OAuth account if needed
         if (account?.provider !== "credentials" && account) {
           await prisma.account.upsert({
             where: {
@@ -120,16 +112,13 @@ const config = {
         }
 
         (user as any).id = existingUser.id;
-      }
-
-      // 🆕 If new user → create with username
-      else {
+      } else {
         const newUser = await prisma.user.create({
           data: {
             email: user.email,
             name: user.name,
             image: user.image,
-            username: generateUsername(user.email), // ✅ REQUIRED
+            username: generateUsername(user.email),
           },
         });
 
@@ -139,48 +128,40 @@ const config = {
       return true;
     },
 
-    // 🔐 JWT
-    async jwt({ token, user }) {
+    // Store username in JWT so session callback never needs a DB call
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = (user as any).id;
+        token.username = (user as any).username;
       }
+
+      // Handle session.update() calls if needed later
+      if (trigger === "update" && session?.username) {
+        token.username = session.username;
+      }
+
       return token;
     },
 
-    // 🔐 SESSION
+    // Read from token — NO database query here
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
-
-        // 🔥 include username in session
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-        });
-
-        if (dbUser) {
-          (session.user as any).username = dbUser.username;
-        }
+        (session.user as any).username = token.username;
       }
       return session;
     },
 
-    // 🔁 REDIRECT
+    // ✅ Fixed redirect — don't intercept callbackUrl blindly
     async redirect({ url, baseUrl }) {
-      const target = new URL(url, baseUrl);
+      // Allow relative paths
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
 
-      if (
-        target.pathname === "/" ||
-        target.pathname === "/login" ||
-        target.pathname === "/signup"
-      ) {
-        return `${baseUrl}/`;
-      }
+      // Allow same-origin absolute URLs
+      if (new URL(url).origin === baseUrl) return url;
 
-      if (target.origin === baseUrl) {
-        return target.toString();
-      }
-
-      return `${baseUrl}`;
+      // Default fallback
+      return baseUrl;
     },
   },
 

@@ -1,42 +1,35 @@
-// proxy.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-export async function proxy(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+const PROTECTED_PATHS = ["/shareOrEditPrompt", "/forYou","/explore"];
+const AUTH_PATHS = ["/login", "/signup"];
 
-  // ✅ Skip non-protected routes early (optional but safe)
-  const PROTECTED_PATHS = [
-    "/shareOrEditPrompt",
-    "/leaderboard",
-    "/pricing",
-    "/profile",
-    "/explore",
-  ];
+export async function proxy(req: NextRequest) {
+  const { pathname, search } = req.nextUrl;
 
   const isProtected = PROTECTED_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
 
-  if (!isProtected) {
-    return NextResponse.next();
+  const isAuthPage = AUTH_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === "production",
+  });
+
+  if (isProtected && !token) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", `${pathname}${search}`);
+    return NextResponse.redirect(loginUrl);
   }
 
- const token = await getToken({
-  req,
-  secret: process.env.NEXTAUTH_SECRET,
-  secureCookie: true, // ✅ FIX
-});
-
-  console.log("TOKEN:", token);
-  console.log("PATH:", pathname);
-
-
-  if (!token) {
-    const loginUrl = new URL("/login", req.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  if (isAuthPage && token) {
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   return NextResponse.next();
@@ -46,7 +39,8 @@ export const config = {
   matcher: [
     "/shareOrEditPrompt/:path*",
     "/forYou/:path*",
-    "/profile/:path*",
     "/explore/:path*",
+    "/login",
+    "/signup",
   ],
 };
