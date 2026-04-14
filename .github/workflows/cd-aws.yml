@@ -41,11 +41,11 @@ jobs:
             --build-arg NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }} \
             --build-arg NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }} \
             --build-arg DATABASE_URL=${{ secrets.DATABASE_URL }} \
-            --build-arg GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-            --build-arg GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }} \
-            --build-arg GITHUB_CLIENT_ID=${{ secrets.GITHUB_CLIENT_ID }} \
-            --build-arg GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }} \
-            --build-arg NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }} \
+            --build-arg GOOGLE_CLIENT_ID=${{ secrets.GO_CLIENT_ID }} \
+            --build-arg GOOGLE_CLIENT_SECRET=${{ secrets.GO_CLIENT_SECRET }} \
+            --build-arg GITHUB_CLIENT_ID=${{ secrets.GI_CLIENT_ID }} \
+            --build-arg GITHUB_CLIENT_SECRET=${{ secrets.GI_CLIENT_SECRET }} \
+            --build-arg NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }} \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
             -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
             .
