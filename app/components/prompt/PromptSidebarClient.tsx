@@ -59,6 +59,7 @@ export default function PromptSidebarClient({
         initialLikes={prompt.likes}
         initialIsLiked={initialIsLiked}
         initialIsSaved={initialIsSaved}
+        userId={userId}
       />
       {isOwner && <OwnerActions promptId={prompt.id} />}
       <StatsPanel prompt={prompt} />
