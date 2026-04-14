@@ -11,6 +11,16 @@ jobs:
     name: Type Check · Lint · Build
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GO_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GO_CLIENT_SECRET }}
+      GITHUB_CLIENT_ID: ${{ secrets.GI_CLIENT_ID }}
+      GITHUB_CLIENT_SECRET: ${{ secrets.GI_CLIENT_SECRET }}
+      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,12 +45,3 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          GOOGLE_CLIENT_ID: ${{ secrets.GO_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GO_CLIENT_SECRET }}
-          GITHUB_CLIENT_ID: ${{ secrets.GI_CLIENT_ID }}
-          GITHUB_CLIENT_SECRET: ${{ secrets.GI_CLIENT_SECRET }}
-          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
