@@ -1,14 +1,19 @@
 "use client";
 
+
 import { useState, useEffect, useMemo, KeyboardEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import clsx from "clsx";
 import toast from "react-hot-toast";
 
+
 type Mode = "create" | "edit";
+
+
 type OutputType = "image" | "video" | "code" | "text";
 type VisibilityType = "public" | "private" | "paid";
+
 
 type InitialPrompt = {
   id?: string;
@@ -22,12 +27,16 @@ type InitialPrompt = {
   isDraft?: boolean;
 };
 
+
 const OUTPUT_TYPES: OutputType[] = ["image", "video", "code", "text"];
+
+
 const VISIBILITY_OPTIONS: VisibilityType[] = ["public", "private", "paid"];
+
 
 const TOOL_OPTIONS = [
   "Midjourney",
-  "DALL·E 3",
+  "DALL\u00b7E 3",
   "Stable Diffusion",
   "GPT-4",
   "Claude",
@@ -35,6 +44,7 @@ const TOOL_OPTIONS = [
   "Runway",
   "Sora",
 ];
+
 
 const CATEGORY_OPTIONS = [
   "Art",
@@ -49,25 +59,28 @@ const CATEGORY_OPTIONS = [
   "NSFW",
 ];
 
+
 export default function ShareOrEditPromptPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mode: Mode = (searchParams.get("mode") as Mode) || "create";
 
+
   const [initial, setInitial] = useState<InitialPrompt | null>(null);
+
 
   useEffect(() => {
     if (mode === "edit") {
       const id = searchParams.get("id");
       if (!id) return;
 
+
       (async () => {
         const res = await fetch(`/api/prompts/${id}`);
-        if (!res.ok) {
-          toast.error("Failed to load prompt for editing.");
-          return;
-        }
+        if (!res.ok) return;
         const data = await res.json();
+
+
         setInitial({
           id: data.id,
           title: data.title,
@@ -90,6 +103,7 @@ export default function ShareOrEditPromptPage() {
     }
   }, [mode, searchParams]);
 
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [promptText, setPromptText] = useState("");
@@ -100,10 +114,13 @@ export default function ShareOrEditPromptPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
 
+
   const tagsInput = useMemo(() => tags.join(", "), [tags]);
+
 
   useEffect(() => {
     if (!initial) return;
@@ -117,6 +134,7 @@ export default function ShareOrEditPromptPage() {
     setPreviewUrl(initial.image || null);
   }, [initial]);
 
+
   const handleFileChange = (f: File | null) => {
     setFile(f);
     if (f) {
@@ -126,6 +144,7 @@ export default function ShareOrEditPromptPage() {
       setPreviewUrl(initial?.image || null);
     }
   };
+
 
   const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -139,9 +158,11 @@ export default function ShareOrEditPromptPage() {
     }
   };
 
+
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
   };
+
 
   const toggleTagFromPreset = (label: string) => {
     if (tags.includes(label)) {
@@ -151,13 +172,15 @@ export default function ShareOrEditPromptPage() {
     }
   };
 
+
   const isPresetSelected = (label: string) => tags.includes(label);
+
 
   const handleSubmit = async (submitMode: "publish" | "draft" | "preview") => {
     if (!initial) return;
 
     if (submitMode === "preview") {
-      toast("Preview coming soon!", { icon: "👀" });
+      toast("Preview coming soon!", { icon: "\ud83d\udc40" });
       return;
     }
 
@@ -185,12 +208,19 @@ export default function ShareOrEditPromptPage() {
       fd.append("visibility", visibility);
       fd.append("isDraft", (submitMode === "draft" || isDraft).toString());
 
-      if (file) fd.append("image", file);
+      if (file) {
+        fd.append("image", file);
+      }
 
-      const url = mode === "create" ? "/api/prompts" : `/api/prompts/${initial.id}`;
+      const url =
+        mode === "create" ? "/api/prompts" : `/api/prompts/${initial.id}`;
+
       const method = mode === "create" ? "POST" : "PATCH";
 
-      const res = await fetch(url, { method, body: fd });
+      const res = await fetch(url, {
+        method,
+        body: fd,
+      });
 
       if (!res.ok) {
         toast.error(
@@ -206,10 +236,10 @@ export default function ShareOrEditPromptPage() {
 
       toast.success(
         submitMode === "draft"
-          ? "Saved as draft! 📝"
+          ? "Saved as draft! \ud83d\udcdd"
           : mode === "create"
-          ? "Prompt published! 🎉"
-          : "Changes saved! ✅",
+          ? "Prompt published! \ud83c\udf89"
+          : "Changes saved! \u2705",
         { id: toastId, duration: 3000 }
       );
 
@@ -220,6 +250,7 @@ export default function ShareOrEditPromptPage() {
     }
   };
 
+
   if (!initial) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -228,23 +259,34 @@ export default function ShareOrEditPromptPage() {
     );
   }
 
+
   return (
     <div className="min-h-screen bg-[#05060a] text-white px-4 sm:px-6 lg:px-10 py-10">
       <div className="max-w-5xl mx-auto">
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-semibold">
             {mode === "create" ? "Share a Prompt" : "Edit Prompt"}
           </h1>
-          <p className="text-sm text-gray-400 mt-2">Share your prompt with the community.</p>
+          <p className="text-sm text-gray-400 mt-2">
+            Share your prompt with the community.
+          </p>
         </div>
+
 
         <div className="space-y-8">
           {/* Basic Information */}
           <section className="bg-[#0b0f16] border border-white/10 rounded-2xl p-4 sm:p-6">
-            <h2 className="text-sm font-medium text-gray-200 mb-4">Basic Information</h2>
+            <h2 className="text-sm font-medium text-gray-200 mb-4">
+              Basic Information
+            </h2>
+
+
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Title</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Title
+                </label>
                 <input
                   className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm outline-none focus:border-purple-500 transition"
                   placeholder="Give your prompt a catchy title..."
@@ -252,8 +294,12 @@ export default function ShareOrEditPromptPage() {
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
+
+
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1.5">Description</label>
+                <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                  Description
+                </label>
                 <textarea
                   className="w-full min-h-[90px] rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm outline-none focus:border-purple-500 transition resize-y"
                   placeholder="Describe what your prompt does..."
@@ -264,20 +310,30 @@ export default function ShareOrEditPromptPage() {
             </div>
           </section>
 
+
           {/* Prompt Text */}
           <section className="bg-[#0b0f16] border border-white/10 rounded-2xl p-4 sm:p-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-medium text-gray-200">Prompt Text</h2>
-              <button type="button" className="text-xs text-purple-400 hover:text-purple-300">
+              <h2 className="text-sm font-medium text-gray-200">
+                Prompt Text
+              </h2>
+              <button
+                type="button"
+                className="text-xs text-purple-400 hover:text-purple-300"
+              >
                 Improve with AI
               </button>
             </div>
+
+
             <textarea
               className="w-full min-h-[160px] rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm outline-none focus:border-purple-500 transition resize-y"
               placeholder="Enter your full prompt text here..."
               value={promptText}
               onChange={(e) => setPromptText(e.target.value)}
             />
+
+
             <div className="mt-3 flex items-center justify-between text-[11px] text-gray-500">
               <button
                 type="button"
@@ -289,10 +345,15 @@ export default function ShareOrEditPromptPage() {
             </div>
           </section>
 
-          {/* Output Type */}
+
+          {/* Output + Upload */}
           <section className="bg-[#0b0f16] border border-white/10 rounded-2xl p-4 sm:p-6">
-            <h2 className="text-sm font-medium text-gray-200 mb-4">Output Type</h2>
-            <div className="flex flex-wrap gap-2">
+            <h2 className="text-sm font-medium text-gray-200 mb-4">
+              Output
+            </h2>
+
+
+            <div className="flex flex-wrap gap-2 mb-4">
               {OUTPUT_TYPES.map((type) => (
                 <button
                   key={type}
@@ -302,66 +363,151 @@ export default function ShareOrEditPromptPage() {
                     "px-3 py-1.5 rounded-full text-xs border transition",
                     outputType === type
                       ? "bg-purple-600 text-white border-purple-500"
-                      : "bg-black/40 border-white/10 text-gray-300 hover:border-purple-500/60"
+                      : "bg-black/40 border-white/10 text-gray-300 hover:border-purple-500/60",
                   )}
                 >
                   {type.charAt(0).toUpperCase() + type.slice(1)}
                 </button>
               ))}
             </div>
+
+
+            <div
+              className="mt-2 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-dashed border-white/20 bg-black/30 px-4 py-6 text-center sm:text-left"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const f = e.dataTransfer.files?.[0];
+                if (f) handleFileChange(f);
+              }}
+            >
+              <div className="flex-1">
+                <p className="text-sm text-gray-200">
+                  Drag and drop your file here, or click to browse
+                </p>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Supports PNG, JPG, GIF, MP4, WEBM up to 50MB
+                </p>
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  className="mt-3 text-xs"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] || null;
+                    handleFileChange(f);
+                  }}
+                />
+              </div>
+
+
+              {previewUrl && outputType === "image" && (
+                <div className="w-32 h-32 rounded-lg overflow-hidden bg-black/60 border border-white/10 flex items-center justify-center">
+                  <Image
+                    src={previewUrl}
+                    alt="Preview"
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
           </section>
+
+
+          {/* Details (Tools & Category) */}
+          <section className="bg-[#0b0f16] border border-white/10 rounded-2xl p-4 sm:p-6">
+            <h2 className="text-sm font-medium text-gray-200 mb-4">
+              Details
+            </h2>
+
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:justify-between">
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 mb-2">AI Tool Used</p>
+                <div className="flex flex-wrap gap-2 text-[11px]">
+                  {TOOL_OPTIONS.map((tool) => (
+                    <button
+                      key={tool}
+                      type="button"
+                      onClick={() => toggleTagFromPreset(tool)}
+                      className={clsx(
+                        "px-2.5 py-1 rounded-full border transition",
+                        isPresetSelected(tool)
+                          ? "bg-purple-600 text-white border-purple-500"
+                          : "bg-white/5 text-gray-200 border-white/10 hover:border-purple-500/60",
+                      )}
+                    >
+                      {tool}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+
+              <div className="flex-1">
+                <p className="text-xs text-gray-400 mb-2">Category</p>
+                <div className="flex flex-wrap gap-2 text-[11px]">
+                  {CATEGORY_OPTIONS.map((cat) => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => toggleTagFromPreset(cat)}
+                      className={clsx(
+                        "px-2.5 py-1 rounded-full border transition",
+                        isPresetSelected(cat)
+                          ? "bg-purple-600 text-white border-purple-500"
+                          : "bg-white/5 text-gray-200 border-white/10 hover:border-purple-500/60",
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
 
           {/* Tags */}
           <section className="bg-[#0b0f16] border border-white/10 rounded-2xl p-4 sm:p-6">
-            <h2 className="text-sm font-medium text-gray-200 mb-4">Tags</h2>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {CATEGORY_OPTIONS.map((label) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={() => toggleTagFromPreset(label)}
-                  className={clsx(
-                    "px-2.5 py-1 rounded-full text-[11px] border transition",
-                    isPresetSelected(label)
-                      ? "bg-purple-600/80 text-white border-purple-500"
-                      : "bg-black/40 border-white/10 text-gray-300 hover:border-purple-500/60"
-                  )}
+            <h2 className="text-sm font-medium text-gray-200 mb-3">Tags</h2>
+
+
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full bg-purple-900/30 px-2.5 py-0.5 text-[11px] text-purple-200 border border-purple-500/30"
                 >
-                  {label}
-                </button>
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:text-white transition"
+                  >
+                    &times;
+                  </button>
+                </span>
               ))}
             </div>
+
+
             <input
               className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm outline-none focus:border-purple-500 transition"
-              placeholder="Type a tag and press Enter..."
+              placeholder="Add a custom tag and press Enter..."
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={handleTagKeyDown}
             />
-            {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 rounded-full bg-purple-900/30 px-2.5 py-0.5 text-[11px] text-purple-200 border border-purple-500/30"
-                  >
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="hover:text-white transition"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
           </section>
+
 
           {/* Visibility */}
           <section className="bg-[#0b0f16] border border-white/10 rounded-2xl p-4 sm:p-6">
-            <h2 className="text-sm font-medium text-gray-200 mb-4">Visibility</h2>
+            <h2 className="text-sm font-medium text-gray-200 mb-3">Visibility</h2>
+
+
             <div className="flex flex-wrap gap-2">
               {VISIBILITY_OPTIONS.map((v) => (
                 <button
@@ -372,7 +518,7 @@ export default function ShareOrEditPromptPage() {
                     "px-3 py-1.5 rounded-full text-xs border transition",
                     visibility === v
                       ? "bg-purple-600 text-white border-purple-500"
-                      : "bg-black/40 border-white/10 text-gray-300 hover:border-purple-500/60"
+                      : "bg-black/40 border-white/10 text-gray-300 hover:border-purple-500/60",
                   )}
                 >
                   {v.charAt(0).toUpperCase() + v.slice(1)}
@@ -381,7 +527,26 @@ export default function ShareOrEditPromptPage() {
             </div>
           </section>
 
-          {/* Submit Buttons */}
+
+          {/* Draft toggle */}
+          <div className="flex items-center gap-3">
+            <input
+              id="draft-toggle"
+              type="checkbox"
+              checked={isDraft}
+              onChange={(e) => setIsDraft(e.target.checked)}
+              className="w-4 h-4 accent-purple-500"
+            />
+            <label
+              htmlFor="draft-toggle"
+              className="text-sm text-gray-300 cursor-pointer"
+            >
+              Save as Draft (won&apos;t be publicly visible)
+            </label>
+          </div>
+
+
+          {/* Action buttons */}
           <div className="flex flex-wrap gap-3 pb-10">
             <button
               type="button"
@@ -389,8 +554,14 @@ export default function ShareOrEditPromptPage() {
               disabled={isSubmitting}
               className="flex-1 sm:flex-none px-6 py-2.5 rounded-full bg-purple-600 text-sm font-medium text-white hover:bg-purple-500 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? "Publishing..." : mode === "create" ? "Publish" : "Save Changes"}
+              {isSubmitting
+                ? "Saving..."
+                : mode === "create"
+                ? "Publish"
+                : "Save Changes"}
             </button>
+
+
             <button
               type="button"
               onClick={() => handleSubmit("draft")}
@@ -399,6 +570,8 @@ export default function ShareOrEditPromptPage() {
             >
               Save as Draft
             </button>
+
+
             <button
               type="button"
               onClick={() => handleSubmit("preview")}
