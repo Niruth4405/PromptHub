@@ -2,17 +2,20 @@
 
 import { useState, useTransition } from "react";
 import { Heart, Bookmark, Share2, ArrowRight } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function EngagementPanel({
   promptId,
   initialLikes,
   initialIsLiked,
   initialIsSaved,
+  userId,
 }: {
   promptId: string;
   initialLikes: number;
   initialIsLiked: boolean;
   initialIsSaved: boolean;
+  userId?: string | null;
 }) {
   const safeInitialLikes =
     typeof initialLikes === "number" && !Number.isNaN(initialLikes)
@@ -25,38 +28,63 @@ export default function EngagementPanel({
   const [isPending, startTransition] = useTransition();
 
   const toggleLike = () => {
-    setIsLiked((prev) => !prev);
-    setLikes((prev) => prev + (isLiked ? -1 : 1));
+    if (!userId) {
+      toast.error("Please log in to like prompts.");
+      return;
+    }
+
+    const wasLiked = isLiked;
+    setIsLiked(!wasLiked);
+    setLikes((prev) => prev + (wasLiked ? -1 : 1));
 
     startTransition(async () => {
-      await fetch(`/api/prompts/${promptId}/like`, { method: "POST" });
+      const res = await fetch(`/api/prompts/${promptId}/like`, { method: "POST" });
+      if (!res.ok) {
+        setIsLiked(wasLiked);
+        setLikes((prev) => prev + (wasLiked ? 1 : -1));
+        toast.error("Failed to update like. Try again.");
+      } else {
+        toast.success(wasLiked ? "Unliked" : "Liked! ❤️", { duration: 1500 });
+      }
     });
   };
 
   const toggleSave = () => {
-    setIsSaved((prev) => !prev);
+    if (!userId) {
+      toast.error("Please log in to save prompts.");
+      return;
+    }
+
+    const wasSaved = isSaved;
+    setIsSaved(!wasSaved);
 
     startTransition(async () => {
-      await fetch(`/api/prompts/${promptId}/save`, { method: "POST" });
+      const res = await fetch(`/api/prompts/${promptId}/save`, { method: "POST" });
+      if (!res.ok) {
+        setIsSaved(wasSaved);
+        toast.error("Failed to save. Try again.");
+      } else {
+        toast.success(wasSaved ? "Removed from saved" : "Saved to your collection! 🔖", { duration: 2000 });
+      }
     });
   };
 
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copied to clipboard! 🔗", { duration: 2000 });
     } catch {
-      // ignore
+      toast.error("Could not copy link.");
     }
   };
 
   return (
     <section className="bg-[#05060a] border border-white/10 rounded-2xl p-4 space-y-3">
       <div className="flex items-center gap-2">
-        {/* Likes */}
         <button
           onClick={toggleLike}
           disabled={isPending}
-          className="flex-1 rounded-full bg-white/5 border border-white/15 px-3 py-2 flex items-center justify-center gap-2 text-xs text-gray-100 hover:border-pink-400 hover:bg-pink-500/10 transition"
+          className="flex-1 rounded-full bg-white/5 border border-white/15 px-3 py-2 flex items-center justify-center gap-2 text-xs text-gray-100 hover:border-pink-400 hover:bg-pink-500/10 transition disabled:opacity-50"
         >
           <Heart
             className="w-4 h-4"
@@ -66,11 +94,10 @@ export default function EngagementPanel({
           <span>{likes}</span>
         </button>
 
-        {/* Save */}
         <button
           onClick={toggleSave}
           disabled={isPending}
-          className="flex-1 rounded-full border border-white/20 bg-white/5 px-4 py-2 flex items-center justify-center gap-2 text-xs text-gray-100 hover:border-white/40 hover:bg-white/5 transition"
+          className="flex-1 rounded-full border border-white/20 bg-white/5 px-4 py-2 flex items-center justify-center gap-2 text-xs text-gray-100 hover:border-white/40 hover:bg-white/5 transition disabled:opacity-50"
         >
           <Bookmark
             className="w-4 h-4"
