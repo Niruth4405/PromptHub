@@ -8,41 +8,116 @@ import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import toast from "react-hot-toast";
 
-type User = {
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-  username?: string | null;
+type UserResult = {
+  id: string;
+  username: string;
+  name: string | null;
+  image: string | null;
 };
 
 export default function Navbar() {
-  const router = useRouter();
-  const pathname = usePathname();
   const { data: session, status } = useSession();
-
   const [open, setOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UserResult[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setOpen(false);
+    setDropdownOpen(false);
+    setSearchOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setDropdownOpen(false);
       }
+
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(e.target as Node)
+      ) {
+        setSearchOpen(false);
+      }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
-    setOpen(false);
-    setDropdownOpen(false);
-  }, [pathname]);
+    const q = searchQuery.trim();
 
-  const handleSearch = (e: React.FormEvent) => {
+    if (!q) {
+      setSearchResults([]);
+      setSearchOpen(false);
+      setSearchLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timeout = setTimeout(async () => {
+      setSearchLoading(true);
+
+      try {
+        const res = await fetch(
+          `/api/search/users?q=${encodeURIComponent(q)}`,
+          { signal: controller.signal }
+        );
+
+        if (!res.ok || controller.signal.aborted) return;
+
+        const data = await res.json();
+
+        if (controller.signal.aborted) return;
+
+        setSearchResults(data.users || []);
+        setSearchOpen(true);
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          console.error("User search failed:", err);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setSearchLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      controller.abort();
+      clearTimeout(timeout);
+    };
+  }, [searchQuery]);
+
+  const handleDesktopSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
+    if (!q) return;
+
+    router.push(`/explore?query=${encodeURIComponent(q)}`);
+    setSearchOpen(false);
+  };
+
+  const handleMobileSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const q = String(formData.get("mobile-search") || "").trim();
+
     if (!q) return;
 
     setOpen(false);
@@ -66,182 +141,221 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <span className="text-2xl">✨</span>
           <span className="font-semibold text-lg text-white">
-            PromptHub
+            Prompt<span className="text-purple-400">Hub</span>
           </span>
         </Link>
 
-        {/* Desktop search */}
-        <form
-          onSubmit={handleSearch}
-          className="hidden md:flex flex-1 max-w-md items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2"
-        >
-          <Search size={16} className="text-gray-400 shrink-0" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search prompts..."
-            className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 outline-none"
-          />
-        </form>
-
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
           <Link
             href="/explore"
-            className="text-sm text-gray-300 hover:text-white transition"
+            className="hover:text-white transition-colors"
           >
             Explore
           </Link>
+          <Link
+            href="/forYou"
+            className="hover:text-white transition-colors"
+          >
+            For You
+          </Link>
+        </div>
 
-          {isLoadingSession ? (
-            <div className="w-8 h-8 rounded-full bg-white/10 animate-pulse" />
-          ) : isAuthenticated ? (
-            <>
-              <Link
-                href="/shareOrEditPrompt?mode=create"
-                className="px-4 py-1.5 rounded-full bg-purple-600 text-sm text-white hover:bg-purple-500 transition"
-              >
-                + Share Prompt
-              </Link>
+        <div className="hidden md:flex items-center gap-3">
+          <div className="relative" ref={searchRef}>
+            <form onSubmit={handleDesktopSearchSubmit}>
+              <Search
+                className="absolute left-3 top-2.5 text-gray-500"
+                size={16}
+              />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search users..."
+                autoComplete="off"
+                className="w-56 lg:w-72 pl-9 pr-3 py-2 rounded-lg bg-[#111827] text-sm text-white placeholder-gray-500 outline-none border border-white/10 focus:border-purple-500"
+              />
+            </form>
 
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setDropdownOpen(!dropdownOpen)}
-                  className="flex items-center gap-2 rounded-full hover:bg-white/5 px-2 py-1 transition"
-                >
-                  {session.user.image ? (
-                    <Image
-                      src={session.user.image}
-                      alt="avatar"
-                      width={32}
-                      height={32}
-                      className="rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center">
-                      <User size={14} className="text-white" />
-                    </div>
-                  )}
-                  <span className="text-sm text-gray-200">{session.user.name}</span>
-                  <ChevronDown size={14} className="text-gray-400" />
-                </button>
-
-                {dropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-[#0f172a] border border-white/10 rounded-xl shadow-xl overflow-hidden z-50">
-                    <Link
-                      href={`/profile/${(session.user as User).username}`}
-                      className="flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition"
-                    >
-                      <User size={14} />
-                      My Profile
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-red-400 transition"
-                    >
-                      <LogOut size={14} />
-                      Sign Out
-                    </button>
+            {searchOpen && (searchResults.length > 0 || searchLoading) && (
+              <div className="absolute mt-1 w-full rounded-xl bg-black border border-white/10 shadow-lg z-40 max-h-64 overflow-y-auto">
+                {searchLoading && (
+                  <div className="px-3 py-2 text-[11px] text-gray-500">
+                    Searching users...
                   </div>
                 )}
+
+                {!searchLoading && searchResults.length === 0 && (
+                  <div className="px-3 py-2 text-[11px] text-gray-500">
+                    No users found
+                  </div>
+                )}
+
+                {!searchLoading &&
+                  searchResults.map((user) => (
+                    <Link
+                      key={user.id}
+                      href={`/profile/${user.username}`}
+                      className="flex items-center gap-2 px-3 py-2 text-[12px] text-gray-100 hover:bg-white/5 transition"
+                      onClick={() => setSearchOpen(false)}
+                    >
+                      <div className="h-6 w-6 rounded-full bg-slate-800 flex items-center justify-center text-[11px]">
+                        {(user.name || user.username).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="truncate">
+                          {user.name || user.username}
+                        </span>
+                        <span className="text-[10px] text-gray-500 truncate">
+                          @{user.username}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
               </div>
-            </>
+            )}
+          </div>
+
+          <Link href="/shareOrEditPrompt">
+            <button className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 text-white text-sm hover:opacity-90 transition">
+              + Share
+            </button>
+          </Link>
+
+          {isLoadingSession ? (
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-full bg-white/10 animate-pulse" />
+              <div className="h-4 w-20 rounded bg-white/10 animate-pulse" />
+            </div>
+          ) : isAuthenticated ? (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-2"
+              >
+                <Image
+                  width={32}
+                  height={32}
+                  src={session.user.image || "/avatar.png"}
+                  className="w-8 h-8 rounded-full border border-white/10 object-cover"
+                  alt="avatar"
+                />
+                <span className="text-sm text-gray-200 max-w-28 truncate">
+                  {session.user.name}
+                </span>
+                <ChevronDown size={16} className="text-gray-400" />
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-44 bg-[#111827] border border-white/10 rounded-lg shadow-lg overflow-hidden z-50">
+                  <Link
+                    href={`/profile/${session.user.username}`}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-white/10 transition"
+                  >
+                    <User size={16} />
+                    Profile
+                  </Link>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-white/10 transition"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <Link
               href="/login"
-              className="px-4 py-1.5 rounded-full border border-white/20 text-sm text-gray-300 hover:text-white hover:border-white/40 transition"
+              className="px-4 py-2 rounded-lg border border-white/10 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition"
             >
-              Sign In
+              Login
             </Link>
           )}
         </div>
 
-        {/* Mobile hamburger */}
         <button
-          onClick={() => setOpen(!open)}
-          className="md:hidden text-white"
-          aria-label="Toggle menu"
+          onClick={() => setOpen((prev) => !prev)}
+          className="md:hidden text-white shrink-0"
+          aria-label={open ? "Close menu" : "Open menu"}
         >
-          {open ? <X size={22} /> : <Menu size={22} />}
+          {open ? <X /> : <Menu />}
         </button>
       </div>
 
-      {/* Mobile menu */}
       {open && (
-        <div className="md:hidden border-t border-white/10 bg-[#0b0f1a] px-4 py-4 space-y-4">
-          {/* Mobile search */}
-          <form
-            onSubmit={handleSearch}
-            className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2"
-          >
-            <Search size={16} className="text-gray-400 shrink-0" />
+        <div className="md:hidden px-4 pb-5 space-y-4 text-sm text-gray-300 border-t border-white/10">
+          <div className="flex flex-col gap-3 pt-4">
+            <Link href="/explore" className="hover:text-white transition-colors">
+              Explore
+            </Link>
+            <Link href="/forYou" className="hover:text-white transition-colors">
+              For You
+            </Link>
+          </div>
+
+          <form onSubmit={handleMobileSearchSubmit} className="relative">
+            <Search
+              className="absolute left-3 top-2.5 text-gray-500"
+              size={16}
+            />
             <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search prompts..."
-              className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 outline-none"
+              name="mobile-search"
+              placeholder="Search users..."
+              autoComplete="off"
+              className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#111827] text-sm text-white placeholder-gray-500 outline-none border border-white/10 focus:border-purple-500"
             />
           </form>
 
-          <Link
-            href="/explore"
-            className="block text-sm text-gray-300 hover:text-white transition"
-          >
-            Explore
-          </Link>
-
           {isAuthenticated ? (
-            <>
-              <Link
-                href="/shareOrEditPrompt?mode=create"
-                className="block px-4 py-2 rounded-full bg-purple-600 text-sm text-white text-center hover:bg-purple-500 transition"
-              >
-                + Share Prompt
-              </Link>
-
-              <div className="flex items-center gap-3 pt-2 border-t border-white/10">
-                {session.user.image ? (
-                  <Image
-                    src={session.user.image}
-                    alt="avatar"
-                    width={36}
-                    height={36}
-                    className="rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-purple-600 flex items-center justify-center">
-                    <User size={14} className="text-white" />
-                  </div>
-                )}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Image
+                  width={32}
+                  height={32}
+                  src={session.user.image || "/avatar.png"}
+                  className="w-8 h-8 rounded-full border border-white/10 object-cover"
+                  alt="avatar"
+                />
                 <div>
-                  <p className="text-sm text-white font-medium">{session.user.name}</p>
-                  <p className="text-xs text-gray-400">@{(session.user as User).username}</p>
+                  <p className="text-sm text-white font-medium">
+                    {session.user.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    @{session.user.username}
+                  </p>
                 </div>
               </div>
 
               <Link
-                href={`/profile/${(session.user as User).username}`}
-                className="block text-sm text-gray-300 hover:text-white transition"
+                href={`/profile/${session.user.username}`}
+                className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition"
               >
-                My Profile
+                <User size={16} />
+                Profile
+              </Link>
+
+              <Link href="/shareOrEditPrompt">
+                <button className="w-full px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 text-white text-sm hover:opacity-90 transition">
+                  + Share Prompt
+                </button>
               </Link>
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 text-sm text-gray-300 hover:text-red-400 transition"
+                className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition"
               >
-                <LogOut size={14} />
-                Sign Out
+                <LogOut size={16} />
+                Logout
               </button>
-            </>
+            </div>
           ) : (
             <Link
               href="/login"
-              className="block text-center px-4 py-2 rounded-full border border-white/20 text-sm text-gray-300 hover:text-white hover:border-white/40 transition"
+              className="block text-center px-4 py-2 rounded-lg border border-white/10 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition"
             >
-              Sign In
+              Login
             </Link>
           )}
         </div>
