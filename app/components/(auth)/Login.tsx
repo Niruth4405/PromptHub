@@ -16,7 +16,6 @@ export default function Login() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Respect callbackUrl from middleware, fallback to "/"
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   async function handleSubmit(e: React.FormEvent) {
@@ -40,9 +39,9 @@ export default function Login() {
     if (res?.error) {
       toast.error("Invalid email or password.");
     } else {
-      toast.success("Welcome back!");
+      toast.success("Welcome back! 👋");
       router.push(callbackUrl);
-      router.refresh(); // sync server session state immediately
+      router.refresh();
     }
   }
 
@@ -60,32 +59,31 @@ export default function Login() {
           <button className="flex-1 py-2 rounded-md bg-[#0f172a] text-white text-sm font-medium">
             Sign In
           </button>
-          <Link
-            href="/signup"
-            className="flex-1 py-2 text-center text-gray-400 text-sm hover:text-white transition"
-          >
+          <Link href="/signup" className="flex-1 py-2 text-center text-gray-400 text-sm hover:text-white transition">
             Sign Up
           </Link>
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-          Welcome back
-        </h1>
-        <p className="text-gray-400 text-sm mb-6">
-          Sign in to continue to your workspace.
-        </p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Welcome back</h1>
+        <p className="text-gray-400 text-sm mb-6">Sign in to continue to your workspace.</p>
 
         {/* Social Login */}
         <div className="flex gap-3 mb-6">
           <button
-            onClick={() => signIn("google", { callbackUrl })}
+            onClick={() => {
+              toast.loading("Redirecting to Google...", { id: "oauth", duration: 4000 });
+              signIn("google", { callbackUrl });
+            }}
             className="flex-1 py-2 border border-white/10 rounded-lg text-white text-sm hover:bg-white/5 transition"
           >
             Google
           </button>
           <button
-            onClick={() => signIn("github", { callbackUrl })}
+            onClick={() => {
+              toast.loading("Redirecting to GitHub...", { id: "oauth", duration: 4000 });
+              signIn("github", { callbackUrl });
+            }}
             className="flex-1 py-2 border border-white/10 rounded-lg text-white text-sm hover:bg-white/5 transition"
           >
             GitHub
@@ -116,14 +114,8 @@ export default function Login() {
           <div>
             <div className="flex justify-between text-sm text-gray-400">
               <label>Password</label>
-              <Link
-                href="#"
-                className="text-purple-400 hover:text-purple-300 transition"
-              >
-                Forgot password?
-              </Link>
+              <Link href="#" className="text-purple-400 hover:text-purple-300 transition">Forgot password?</Link>
             </div>
-
             <div className="relative mt-1">
               <input
                 type={showPassword ? "text" : "password"}
@@ -133,11 +125,7 @@ export default function Login() {
                 disabled={loading}
                 className="w-full px-3 py-2 bg-[#0b0f1a] border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-gray-400"
-              >
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-gray-400">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
@@ -148,26 +136,14 @@ export default function Login() {
             disabled={loading}
             className="w-full py-2 rounded-lg bg-gradient-to-r from-purple-500 to-cyan-500 text-white font-medium hover:opacity-90 transition disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {loading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              "Sign In"
-            )}
+            {loading ? (<><Loader2 size={16} className="animate-spin" />Signing in...</>) : "Sign In"}
           </button>
         </form>
 
         {/* Footer */}
         <p className="text-center text-gray-400 text-sm mt-6">
           {"Don't have an account?"}
-          <Link
-            href="/signup"
-            className="text-purple-400 hover:text-purple-300 transition"
-          >
-            Create one
-          </Link>
+          <Link href="/signup" className="text-purple-400 hover:text-purple-300 transition">Create one</Link>
         </p>
       </div>
     </div>
