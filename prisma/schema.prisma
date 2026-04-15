@@ -2,10 +2,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
 }
+
 
 model User {
   id            String          @id @default(auto()) @map("_id") @db.ObjectId
@@ -14,7 +16,9 @@ model User {
   email         String?         @unique
   emailVerified DateTime?
 
+
   image         String?
+
 
   // 🔥 Profile fields
   bio           String?
@@ -25,27 +29,50 @@ model User {
   twitter       String?
   designation   String?
 
+
   // ✅ NEW FIELDS
   expertise     String[] @default([])
   tools         String[] @default([])
 
+
   // 🔐 Auth
   passwordHash  String?
+
 
   accounts      Account[]
   sessions      Session[]
   Authenticator Authenticator[]
 
+
   prompts       Prompt[]
   promptSaves   PromptSave[]
   promptLikes   PromptLike[]
-  comments    Comment[]
-  followers Follow[] @relation("followers") 
-  following Follow[] @relation("following") 
+  comments      Comment[]
+  followers     Follow[]           @relation("followers")
+  following     Follow[]           @relation("following")
+
+  // 🔑 Password Reset OTP
+  passwordResetOtps PasswordResetOtp[]
+
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+
+// 🔑 OTP for password reset
+model PasswordResetOtp {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  email     String
+  otpHash   String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  attempts  Int      @default(0)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
 
 model Prompt {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -55,50 +82,63 @@ model Prompt {
   image       String?
   tags        String[]
 
+
   outputType  String?
   visibility  String?
   isDraft     Boolean @default(false)
 
+
   likes       Int      @default(0)
   views       Int      @default(0)
+
 
   authorId    String   @db.ObjectId
   author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  
+
   saves       PromptSave[]
   likedBy     PromptLike[]
   comments    Comment[]
 
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
 
 model PromptSave {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   promptId  String   @db.ObjectId
 
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
 
+
   createdAt DateTime @default(now())
+
 
   @@unique([userId, promptId], name: "userId_promptId")
 }
+
 
 model PromptLike {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   userId    String   @db.ObjectId
   promptId  String   @db.ObjectId
 
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
 
+
   createdAt DateTime @default(now())
+
 
   @@unique([userId, promptId], name: "userId_promptId")
 }
+
 
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
@@ -106,6 +146,7 @@ model Account {
   type              String
   provider          String
   providerAccountId String
+
 
   refresh_token     String? @db.String
   access_token      String? @db.String
@@ -115,13 +156,17 @@ model Account {
   id_token          String? @db.String
   session_state     String?
 
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
 
   @@unique([provider, providerAccountId])
 }
+
 
 model Session {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -129,11 +174,14 @@ model Session {
   userId       String   @db.ObjectId
   expires      DateTime
 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
+
 
 model VerificationToken {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -141,8 +189,10 @@ model VerificationToken {
   token      String
   expires    DateTime
 
+
   @@unique([identifier, token])
 }
+
 
 model Authenticator {
   credentialID         String  @id @map("_id")
@@ -154,34 +204,42 @@ model Authenticator {
   credentialBackedUp   Boolean
   transports           String?
 
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
 
   @@unique([userId, credentialID])
 }
+
 
 model Comment {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   content   String
 
+
   userId    String   @db.ObjectId
   promptId  String   @db.ObjectId
 
+
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   prompt    Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+
 model Follow {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  followerId  String   @db.ObjectId  
-  followingId String   @db.ObjectId  
+  followerId  String   @db.ObjectId
+  followingId String   @db.ObjectId
   createdAt   DateTime @default(now())
 
- 
+
   follower  User @relation("followers", fields: [followerId], references: [id])
   following User @relation("following", fields: [followingId], references: [id])
+
 
   @@unique([followerId, followingId])
 }

@@ -1,49 +1,68 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { sendOtpEmail } from "@/lib/mailer";
 
-const GENERIC_RESPONSE = NextResponse.json(
-  { message: "If that email exists, we sent a reset code." },
-  { status: 200 }
-);
+const GENERIC_MESSAGE = "If that email exists, we sent a reset code.";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const { email } = await req.json();
+    const body = await req.json();
+    const email = body?.email;
+
     if (!email || typeof email !== "string") {
-      return NextResponse.json({ error: "Email is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Email is required." },
+        { status: 400 }
+      );
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-    if (!user) return GENERIC_RESPONSE;
 
-    // Rate-limit: only allow resend after 60 seconds
-    const recent = await prisma.passwordResetOtp.findFirst({
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { message: GENERIC_MESSAGE },
+        { status: 200 }
+      );
+    }
+
+    const recentOtp = await prisma.passwordResetOtp.findFirst({
       where: {
         email: normalizedEmail,
         used: false,
-        createdAt: { gte: new Date(Date.now() - 60_000) },
+        createdAt: {
+          gte: new Date(Date.now() - 60 * 1000),
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
       },
     });
-    if (recent) {
+
+    if (recentOtp) {
       return NextResponse.json(
         { error: "Please wait 60 seconds before requesting another OTP." },
         { status: 429 }
       );
     }
 
-    // Invalidate all old OTPs for this email
     await prisma.passwordResetOtp.updateMany({
-      where: { email: normalizedEmail, used: false },
-      data: { used: true },
+      where: {
+        email: normalizedEmail,
+        used: false,
+      },
+      data: {
+        used: true,
+      },
     });
 
-    // Generate and hash OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpHash = await bcrypt.hash(otp, 10);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     await prisma.passwordResetOtp.create({
       data: {
@@ -57,9 +76,17 @@ export async function POST(req: Request) {
     });
 
     await sendOtpEmail(normalizedEmail, otp);
-    return GENERIC_RESPONSE;
-  } catch (err) {
-    console.error("[forgot-password]", err);
-    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+
+    return NextResponse.json(
+      { message: GENERIC_MESSAGE },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("[FORGOT_PASSWORD_POST_ERROR]", error);
+
+    return NextResponse.json(
+      { error: "Internal server error." },
+      { status: 500 }
+    );
   }
 }
